@@ -13,7 +13,9 @@ import {
   Edit,
   User,
   MapPin,
+  Loader2,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import EditProfileForm from "./EditProfileForm";
@@ -42,6 +44,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function getProfile() {
       if (!user) return;
 
@@ -111,11 +114,17 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       } catch (error) {
         console.error("Error:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
     getProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const handleLogout = async () => {
@@ -128,25 +137,88 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setIsEditing(false);
   };
 
-  const post = {
-    id: "post-1",
-    author: {
-      name: profile.name,
-      username: "Jun 16",
-      avatar: profile.avatar,
-    },
-    content: "",
-    media: {
-      type: "image",
-      src: "https://images.unsplash.com/photo-1570639224380-c0e8ec8d8a29?w=800&q=80",
-      alt: "VR experience",
-    },
-    timestamp: "Jun 16",
-    likes: 2,
-    comments: 0,
-    shares: 0,
-    isLiked: false,
-  };
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUserPosts = async () => {
+      if (!user) return;
+
+      try {
+        // Fetch posts by this user
+        const { data: postsData, error } = await supabase
+          .from("posts")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching user posts:", error);
+          return;
+        }
+
+        if (!postsData || postsData.length === 0) {
+          if (isMounted) {
+            setUserPosts([]);
+            setLoadingPosts(false);
+          }
+          return;
+        }
+
+        // Format posts
+        const formattedPosts = await Promise.all(
+          postsData.map(async (post) => {
+            // Get comments count
+            const { count: commentsCount } = await supabase
+              .from("comments")
+              .select("id", { count: "exact" })
+              .eq("post_id", post.id);
+
+            // Get likes count
+            const { count: likesCount } = await supabase
+              .from("likes")
+              .select("id", { count: "exact" })
+              .eq("post_id", post.id);
+
+            return {
+              id: post.id,
+              content: post.content,
+              media: post.media_url
+                ? {
+                    type: post.media_type || "image",
+                    src: post.media_url,
+                    alt: "Post media",
+                  }
+                : undefined,
+              timestamp: formatDistanceToNow(new Date(post.created_at), {
+                addSuffix: true,
+              }),
+              likes: likesCount || 0,
+              comments: commentsCount || 0,
+              shares: 0,
+            };
+          }),
+        );
+
+        if (isMounted) {
+          setUserPosts(formattedPosts);
+          setLoadingPosts(false);
+        }
+      } catch (error) {
+        console.error("Error fetching user posts:", error);
+        if (isMounted) {
+          setLoadingPosts(false);
+        }
+      }
+    };
+
+    fetchUserPosts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   if (loading) {
     return (
@@ -251,51 +323,78 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
       {/* User Posts */}
       <div className="flex-1 px-4 py-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="flex items-start p-4">
-            <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
-              <img
-                src={profile.avatar}
-                alt={profile.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+        <h2 className="text-xl font-semibold mb-4">Your Posts</h2>
 
-            <div className="flex-1">
-              <div className="flex justify-between">
-                <div>
-                  <h3 className="font-semibold">{profile.name}</h3>
-                  <p className="text-xs text-gray-500">{post.timestamp}</p>
-                </div>
-                <button className="h-8 w-8 flex items-center justify-center">
-                  <MoreVertical className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="mt-3 rounded-lg overflow-hidden">
-                <img
-                  src={post.media?.src}
-                  alt={post.media?.alt || "Post image"}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
-
-              <div className="flex items-center mt-3">
-                <button className="flex items-center gap-1 p-2">
-                  <Heart className="h-5 w-5" />
-                  <span>{post.likes}</span>
-                </button>
-                <button className="flex items-center gap-1 p-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <span>{post.comments}</span>
-                </button>
-                <button className="flex items-center gap-1 p-2">
-                  <Share2 className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
+        {loadingPosts ? (
+          <div className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        </div>
+        ) : userPosts.length > 0 ? (
+          <div className="space-y-4">
+            {userPosts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+              >
+                <div className="flex items-start p-4">
+                  <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
+                    <img
+                      src={profile.avatar}
+                      alt={profile.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <div>
+                        <h3 className="font-semibold">{profile.name}</h3>
+                        <p className="text-xs text-gray-500">
+                          {post.timestamp}
+                        </p>
+                      </div>
+                      <button className="h-8 w-8 flex items-center justify-center">
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    {post.content && <p className="mt-2">{post.content}</p>}
+
+                    {post.media && (
+                      <div className="mt-3 rounded-lg overflow-hidden">
+                        <img
+                          src={post.media.src}
+                          alt={post.media.alt || "Post image"}
+                          className="w-full h-auto object-cover"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center mt-3">
+                      <button className="flex items-center gap-1 p-2">
+                        <Heart className="h-5 w-5" />
+                        <span>{post.likes}</span>
+                      </button>
+                      <button className="flex items-center gap-1 p-2">
+                        <MessageSquare className="h-5 w-5" />
+                        <span>{post.comments}</span>
+                      </button>
+                      <button className="flex items-center gap-1 p-2">
+                        <Share2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <p className="text-gray-500 dark:text-gray-400">
+              You haven't created any posts yet.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

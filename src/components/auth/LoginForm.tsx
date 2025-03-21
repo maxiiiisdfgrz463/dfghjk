@@ -26,6 +26,9 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
     try {
       console.log("Attempting login with:", email);
+      // Add a small delay to ensure Supabase has time to process
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const result = await onLogin(email, password);
 
       if (result?.error) {

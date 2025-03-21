@@ -37,6 +37,7 @@ const CommentSection = ({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchComments = async () => {
       if (!postId) return;
 
@@ -55,8 +56,10 @@ const CommentSection = ({
         }
 
         if (!commentsData || commentsData.length === 0) {
-          setLocalComments([]);
-          setLoading(false);
+          if (isMounted) {
+            setLocalComments([]);
+            setLoading(false);
+          }
           return;
         }
 
@@ -107,15 +110,23 @@ const CommentSection = ({
           }),
         );
 
-        setLocalComments(formattedComments);
+        if (isMounted) {
+          setLocalComments(formattedComments);
+          setLoading(false);
+        }
       } catch (error) {
         console.error("Error fetching comments:", error);
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchComments();
+
+    return () => {
+      isMounted = false;
+    };
   }, [postId, user]);
 
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -153,7 +164,7 @@ const CommentSection = ({
               user.user_metadata?.name || user.email?.split("@")[0] || "User",
             avatar:
               user.user_metadata?.avatar_url ||
-              `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`,
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || user.id}`,
           },
           content: newComment,
           timestamp: "Just now",
@@ -285,7 +296,7 @@ const CommentSection = ({
               <AvatarImage
                 src={
                   user?.user_metadata?.avatar_url ||
-                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || "user"}`
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || user?.id || "user"}`
                 }
                 alt="Current User"
               />

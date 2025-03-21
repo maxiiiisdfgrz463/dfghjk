@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       console.log("Attempting to sign up with:", { email, name });
 
-      // Sign up the user
+      // Sign up the user with email confirmation disabled for testing
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -73,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           data: {
             name,
           },
+          emailRedirectTo: window.location.origin + "/feed",
         },
       });
 

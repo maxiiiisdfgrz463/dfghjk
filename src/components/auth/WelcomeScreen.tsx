@@ -3,18 +3,27 @@ import { Avatar } from "./../ui/avatar";
 import { AvatarImage } from "./../ui/avatar";
 import { AvatarFallback } from "./../ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface WelcomeScreenProps {
   onGetStarted?: () => void;
   onLogin?: () => void;
+  onBack?: () => void;
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   onGetStarted = () => {},
   onLogin = () => {},
+  onBack = () => {},
 }) => {
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-[#0d1015] p-6 rounded-[40px]">
+      <button
+        onClick={onBack}
+        className="w-12 h-12 rounded-md bg-gray-200 dark:bg-gray-800 mb-12 self-start flex static justify-center items-center"
+      >
+        <ArrowLeft className="h-6 w-6" />
+      </button>
       <div className="flex-1 flex flex-col items-center justify-center text-center">
         <div className="mb-8"></div>
         <h1 className="text-5xl mb-4 font-bold flex text-[#00b4d8]">FRYCOM</h1>

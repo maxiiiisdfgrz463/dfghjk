@@ -29,6 +29,9 @@ const SignupForm: React.FC<SignupFormProps> = ({
 
     try {
       console.log("Submitting signup form with:", { name, email });
+      // Add a small delay to ensure Supabase has time to process
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       const result = await signUp(email, password, name);
 
       if (result.error) {
@@ -44,6 +47,8 @@ const SignupForm: React.FC<SignupFormProps> = ({
           title: "Account created",
           description: "Your account has been created successfully!",
         });
+        // Add a small delay before redirecting
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         onSignup(name, email, password);
       }
     } catch (err) {

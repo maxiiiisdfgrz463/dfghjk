@@ -49,6 +49,7 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
     [key: string]: boolean;
   }>({});
   useEffect(() => {
+    let isMounted = true;
     const fetchPosts = async () => {
       if (!user) return;
 
@@ -134,15 +135,23 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
           }),
         );
 
-        setPosts(formattedPosts);
+        if (isMounted) {
+          setPosts(formattedPosts);
+          setLoading(false);
+        }
       } catch (error) {
         console.error("Error fetching feed data:", error);
-      } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPosts();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const handleLike = async (postId: string) => {
@@ -229,7 +238,10 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
           <button className="h-10 w-10 flex items-center justify-center">
             <Heart className="h-6 w-6" />
           </button>
-          <button className="h-10 w-10 flex items-center justify-center">
+          <button
+            className="h-10 w-10 flex items-center justify-center"
+            onClick={onCreatePost}
+          >
             <Plus className="h-6 w-6" />
           </button>
           <div
@@ -239,7 +251,7 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
             <img
               src={
                 user?.user_metadata?.avatar_url ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id || "user"}`
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || user?.id || "user"}`
               }
               alt="User"
               className="w-full h-full object-cover"

@@ -57,6 +57,7 @@ const AppRoutes: React.FC = () => {
   const navigateToLogin = () => navigate("/login");
   const navigateToSignup = () => navigate("/signup");
   const navigateToWelcome = () => navigate("/");
+  const navigateBack = () => window.history.back();
   const navigateToFeed = () => navigate("/feed");
   const navigateToProfile = () => navigate("/profile");
   const navigateToCreatePost = () => navigate("/create-post");
@@ -80,6 +81,7 @@ const AppRoutes: React.FC = () => {
             <WelcomeScreen
               onGetStarted={navigateToSignup}
               onLogin={navigateToLogin}
+              onBack={navigateBack}
             />
           )
         }
@@ -93,6 +95,7 @@ const AppRoutes: React.FC = () => {
             <LoginForm
               onLogin={handleLogin}
               onNavigateToSignup={navigateToSignup}
+              onBack={navigateToWelcome}
             />
           )
         }
@@ -106,6 +109,7 @@ const AppRoutes: React.FC = () => {
             <SignupForm
               onSignup={handleSignup}
               onNavigateToLogin={navigateToLogin}
+              onBack={navigateToWelcome}
             />
           )
         }

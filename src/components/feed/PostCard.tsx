@@ -71,6 +71,13 @@ const PostCard: React.FC<PostCardProps> = ({
     onLike(post.id);
   };
 
+  const [showComments, setShowComments] = useState(false);
+
+  const handleCommentClick = () => {
+    setShowComments(!showComments);
+    onComment(post.id);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -129,7 +136,7 @@ const PostCard: React.FC<PostCardProps> = ({
               variant="ghost"
               size="sm"
               className="flex items-center gap-1"
-              onClick={() => onComment(post.id)}
+              onClick={handleCommentClick}
             >
               <MessageSquare className="h-4 w-4" />
               <span>{post.comments}</span>
@@ -146,7 +153,7 @@ const PostCard: React.FC<PostCardProps> = ({
             </Button>
           </div>
 
-          <CommentSection postId={post.id} />
+          {showComments && <CommentSection postId={post.id} />}
         </CardFooter>
       </Card>
     </motion.div>

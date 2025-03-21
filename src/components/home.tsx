@@ -62,6 +62,17 @@ const HomePage: React.FC = () => {
         return;
       }
 
+      // Fetch user likes if user is logged in
+      let likedPostIds = new Set();
+      if (user) {
+        const { data: likesData } = await supabase
+          .from("likes")
+          .select("post_id")
+          .eq("user_id", user.id);
+
+        likedPostIds = new Set(likesData?.map((like) => like.post_id) || []);
+      }
+
       // Fetch author details for each post
       const postsWithAuthors = await Promise.all(
         postsData.map(async (post) => {
@@ -75,12 +86,27 @@ const HomePage: React.FC = () => {
             console.error("Error fetching author:", authorError);
           }
 
+          // Get comments count
+          const { count: commentsCount } = await supabase
+            .from("comments")
+            .select("id", { count: "exact" })
+            .eq("post_id", post.id);
+
+          // Get likes count
+          const { count: likesCount } = await supabase
+            .from("likes")
+            .select("id", { count: "exact" })
+            .eq("post_id", post.id);
+
           return {
             ...post,
             author: authorData || {
               name: "Unknown User",
               avatar_url: null,
             },
+            likes_count: likesCount || 0,
+            comments_count: commentsCount || 0,
+            isLiked: likedPostIds.has(post.id),
           };
         }),
       );
@@ -136,7 +162,8 @@ const HomePage: React.FC = () => {
     likes: post.likes_count || 0,
     comments: post.comments_count || 0,
     shares: 0,
-    isLiked: false, // This would need to be determined based on the current user's likes
+    isLiked: post.isLiked || false,
+    user_id: post.user_id,
   }));
 
   return (

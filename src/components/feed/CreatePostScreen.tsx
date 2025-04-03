@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
@@ -20,19 +20,11 @@ import {
 interface CreatePostScreenProps {
   onBack?: () => void;
   onPost?: (content: string, media?: { type: string; url: string }) => void;
-  user?: {
-    name: string;
-    avatar: string;
-  };
 }
 
 const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
   onBack = () => {},
   onPost = () => {},
-  user = {
-    name: "Max Mustermann",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Max",
-  },
 }) => {
   const { user: authUser } = useAuth();
   const { toast } = useToast();
@@ -44,6 +36,46 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
   const [mediaType, setMediaType] = useState<"image" | "video" | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const [userProfile, setUserProfile] = useState({
+    name: "",
+    avatar: "",
+  });
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!authUser) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("name, avatar_url")
+          .eq("id", authUser.id)
+          .single();
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          setUserProfile({
+            name: authUser.email?.split("@")[0] || "User",
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser.email || authUser.id}`,
+          });
+          return;
+        }
+
+        if (data) {
+          setUserProfile({
+            name: data.name || authUser.email?.split("@")[0] || "User",
+            avatar:
+              data.avatar_url ||
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser.email || authUser.id}`,
+          });
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [authUser]);
 
   const handleImageClick = () => {
     imageInputRef.current?.click();
@@ -183,16 +215,14 @@ const CreatePostScreen: React.FC<CreatePostScreenProps> = ({
         <div className="flex items-center mb-4">
           <div className="w-12 h-12 rounded-full overflow-hidden mr-3">
             <img
-              src={authUser?.user_metadata?.avatar_url || user.avatar}
-              alt={authUser?.user_metadata?.name || user.name}
+              src={userProfile.avatar}
+              alt={userProfile.name}
               className="w-full h-full object-cover"
             />
           </div>
 
           <div>
-            <h3 className="font-semibold">
-              {authUser?.user_metadata?.name || user.name}
-            </h3>
+            <h3 className="font-semibold">{userProfile.name}</h3>
             <button
               className="text-sm text-gray-500 flex items-center gap-1"
               onClick={() => setIsPublic(!isPublic)}

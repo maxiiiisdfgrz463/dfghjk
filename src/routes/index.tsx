@@ -7,6 +7,7 @@ import SignupForm from "@/components/auth/SignupForm";
 import FeedScreen from "@/components/feed/FeedScreen";
 import ProfileScreen from "@/components/profile/ProfileScreen";
 import CreatePostScreen from "@/components/feed/CreatePostScreen";
+import { ArrowLeft } from "lucide-react";
 
 const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
@@ -61,6 +62,7 @@ const AppRoutes: React.FC = () => {
   const navigateToFeed = () => navigate("/feed");
   const navigateToProfile = () => navigate("/profile");
   const navigateToCreatePost = () => navigate("/create-post");
+  const navigateToNotifications = () => navigate("/notifications");
 
   if (isLoading) {
     return (
@@ -123,6 +125,7 @@ const AppRoutes: React.FC = () => {
             <FeedScreen
               onCreatePost={navigateToCreatePost}
               onProfile={navigateToProfile}
+              onNotifications={navigateToNotifications}
             />
           )
         }
@@ -134,6 +137,31 @@ const AppRoutes: React.FC = () => {
             <Navigate to="/login" replace />
           ) : (
             <ProfileScreen onBack={navigateToFeed} onLogout={handleLogout} />
+          )
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 p-4">
+              <div className="flex items-center mb-6">
+                <button
+                  className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-800 flex items-center justify-center mr-4"
+                  onClick={navigateToFeed}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <h1 className="text-2xl font-bold">Notifications</h1>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-gray-500 dark:text-gray-400">
+                  Notifications feature coming soon!
+                </p>
+              </div>
+            </div>
           )
         }
       />

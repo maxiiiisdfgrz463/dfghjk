@@ -14,4 +14,11 @@ if (supabaseUrl === "https://example.supabase.co") {
   );
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: "frycom-auth-storage-key",
+  },
+});

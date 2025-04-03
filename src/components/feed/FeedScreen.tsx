@@ -8,6 +8,7 @@ import {
   MoreVertical,
   Plus,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,7 @@ import CommentSection from "./CommentSection";
 interface FeedScreenProps {
   onCreatePost?: () => void;
   onProfile?: () => void;
+  onNotifications?: () => void;
   posts?: Array<{
     id: string;
     author: {
@@ -41,6 +43,7 @@ interface FeedScreenProps {
 const FeedScreen: React.FC<FeedScreenProps> = ({
   onCreatePost = () => {},
   onProfile = () => {},
+  onNotifications = () => {},
 }) => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
@@ -48,6 +51,7 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
   const [expandedComments, setExpandedComments] = useState<{
     [key: string]: boolean;
   }>({});
+
   useEffect(() => {
     let isMounted = true;
     const fetchPosts = async () => {
@@ -104,6 +108,9 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
               .select("id", { count: "exact" })
               .eq("post_id", post.id);
 
+            // Check if this post is from the current user
+            const isOwnPost = post.user_id === user.id;
+
             return {
               id: post.id,
               author: {
@@ -131,6 +138,7 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
               shares: 0,
               isLiked: likedPostIds.has(post.id),
               user_id: post.user_id,
+              isOwnPost: isOwnPost,
             };
           }),
         );
@@ -235,7 +243,10 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
         <h1 className="text-2xl font-bold text-[#00b4d8]">FRYCOM</h1>
 
         <div className="flex items-center space-x-4">
-          <button className="h-10 w-10 flex items-center justify-center">
+          <button
+            className="h-10 w-10 flex items-center justify-center"
+            onClick={onNotifications}
+          >
             <Heart className="h-6 w-6" />
           </button>
           <button
@@ -270,7 +281,7 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
           posts.map((post) => (
             <div
               key={post.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+              className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${post.isOwnPost ? "border-l-4 border-[#00b4d8]" : ""}`}
             >
               <div className="flex items-start p-4">
                 <div className="w-10 h-10 rounded-full overflow-hidden mr-3">

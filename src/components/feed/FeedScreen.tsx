@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -9,7 +10,19 @@ import {
   Plus,
   Loader2,
   ArrowLeft,
+  Search,
+  Home as HomeIcon,
+  Bell,
+  User,
+  Trash2,
+  Flag,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
@@ -45,6 +58,7 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
   onProfile = () => {},
   onNotifications = () => {},
 }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,6 +225,32 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
     }));
   };
 
+  const handleDeletePost = async (postId: string) => {
+    if (!user) return;
+
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      // Delete the post from the database
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId)
+        .eq("user_id", user.id); // Ensure the user can only delete their own posts
+
+      if (error) {
+        console.error("Error deleting post:", error);
+        return;
+      }
+
+      // Remove the post from the UI
+      setPosts(posts.filter((post) => post.id !== postId));
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
+
   const handleAddComment = async (postId: string, content: string) => {
     if (!user || !content.trim()) return;
 
@@ -239,34 +279,35 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-[#0d1015] rounded-[40px]">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 p-4 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-[#00b4d8]">FRYCOM</h1>
+      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 p-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-[#00b4d8]">FRYCOM</h1>
 
-        <div className="flex items-center space-x-4">
-          <button
-            className="h-10 w-10 flex items-center justify-center"
-            onClick={onNotifications}
-          >
-            <Heart className="h-6 w-6" />
-          </button>
-          <button
-            className="h-10 w-10 flex items-center justify-center"
-            onClick={onCreatePost}
-          >
-            <Plus className="h-6 w-6" />
-          </button>
-          <div
-            className="h-10 w-10 rounded-full overflow-hidden cursor-pointer"
-            onClick={onProfile}
-          >
-            <img
-              src={
-                user?.user_metadata?.avatar_url ||
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || user?.id || "user"}`
-              }
-              alt="User"
-              className="w-full h-full object-cover"
-            />
+          <div className="flex items-center space-x-4">
+            <button
+              className="h-10 w-10 flex items-center justify-center"
+              onClick={() => navigate("/search")}
+            >
+              <Search className="h-6 w-6" />
+            </button>
+            <button
+              className="h-10 w-10 flex items-center justify-center"
+              onClick={onCreatePost}
+            >
+              <Plus className="h-6 w-6" />
+            </button>
+            <Avatar className="h-10 w-10 cursor-pointer" onClick={onProfile}>
+              <AvatarImage
+                src={
+                  user?.user_metadata?.avatar_url ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || user?.id || "user"}`
+                }
+                alt="User"
+              />
+              <AvatarFallback>
+                {user?.email?.charAt(0).toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
       </div>
@@ -284,34 +325,72 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
               className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${post.isOwnPost ? "border-l-4 border-[#00b4d8]" : ""}`}
             >
               <div className="flex items-start p-4">
-                <div className="w-10 h-10 rounded-full overflow-hidden mr-3">
-                  <img
+                <Avatar
+                  className="w-10 h-10 mr-3 cursor-pointer"
+                  onClick={() => navigate(`/user/${post.user_id}`)}
+                >
+                  <AvatarImage
                     src={post.author.avatar}
                     alt={post.author.name}
-                    className="w-full h-full object-cover"
                   />
-                </div>
+                  <AvatarFallback>
+                    {post.author.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
 
                 <div className="flex-1">
                   <div className="flex justify-between">
                     <div>
-                      <h3 className="font-semibold">{post.author.name}</h3>
+                      <h3
+                        className="font-semibold cursor-pointer hover:underline"
+                        onClick={() => navigate(`/user/${post.user_id}`)}
+                      >
+                        {post.author.name}
+                      </h3>
                       <p className="text-xs text-gray-500">{post.timestamp}</p>
                     </div>
-                    <button className="h-8 w-8 flex items-center justify-center">
-                      <MoreVertical className="h-5 w-5" />
-                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="h-8 w-8 flex items-center justify-center">
+                          <MoreVertical className="h-5 w-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {post.isOwnPost && (
+                          <DropdownMenuItem
+                            className="text-red-500 focus:text-red-500"
+                            onClick={() => handleDeletePost(post.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem>
+                          <Flag className="h-4 w-4 mr-2" />
+                          Report
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
 
                   {post.content && <p className="mt-2">{post.content}</p>}
 
                   {post.media && (
                     <div className="mt-3 rounded-lg overflow-hidden">
-                      <img
-                        src={post.media.src}
-                        alt={post.media.alt || "Post image"}
-                        className="h-auto object-cover w-full"
-                      />
+                      {post.media.type === "image" ? (
+                        <img
+                          src={post.media.src}
+                          alt={post.media.alt || "Post image"}
+                          className="h-auto object-cover w-full"
+                        />
+                      ) : (
+                        <video
+                          src={post.media.src}
+                          className="h-auto w-full object-cover"
+                          controls
+                          playsInline
+                        />
+                      )}
                     </div>
                   )}
 
@@ -360,13 +439,58 @@ const FeedScreen: React.FC<FeedScreenProps> = ({
         )}
       </div>
 
+      {/* Bottom Navigation Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex justify-around items-center p-2 z-20">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col items-center justify-center h-14 w-16 text-[#00b4d8]"
+        >
+          <HomeIcon className="h-6 w-6" />
+          <span className="text-xs mt-1">Home</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col items-center justify-center h-14 w-16"
+          onClick={() => navigate("/search")}
+        >
+          <Search className="h-6 w-6" />
+          <span className="text-xs mt-1">Search</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col items-center justify-center h-14 w-16"
+          onClick={onNotifications}
+        >
+          <Bell className="h-6 w-6" />
+          <span className="text-xs mt-1">Alerts</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex flex-col items-center justify-center h-14 w-16"
+          onClick={onProfile}
+        >
+          <User className="h-6 w-6" />
+          <span className="text-xs mt-1">Profile</span>
+        </Button>
+      </div>
+
       {/* Create Post FAB */}
       <Button
         onClick={onCreatePost}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full hover:bg-emerald-500 shadow-lg bg-[#00b4d8]"
+        className="fixed bottom-20 right-6 h-14 w-14 rounded-full hover:bg-emerald-500 shadow-lg bg-[#00b4d8]"
       >
         <Plus className="h-6 w-6" />
       </Button>
+
+      {/* Add padding at the bottom to account for the navigation bar */}
+      <div className="h-16"></div>
     </div>
   );
 };

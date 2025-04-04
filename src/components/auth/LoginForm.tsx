@@ -31,7 +31,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
       const result = await onLogin(email, password);
 
-      if (result?.error) {
+      if (result && result.error) {
         console.error("Login error:", result.error);
         toast({
           variant: "destructive",

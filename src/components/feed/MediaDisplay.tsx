@@ -63,7 +63,18 @@ const MediaDisplay = ({
                     loop
                     playsInline
                     muted={isMuted}
-                    autoPlay={false}
+                    autoPlay={isPlaying}
+                    controls={false}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsPlaying(!isPlaying);
+                      const videoElement = e.target as HTMLVideoElement;
+                      if (isPlaying) {
+                        videoElement.pause();
+                      } else {
+                        videoElement.play();
+                      }
+                    }}
                   />
                   <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/50 p-2 text-white">
                     <button

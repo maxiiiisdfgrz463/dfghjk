@@ -1,12 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useNavigate,
+  Navigate,
+  useParams,
+} from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import WelcomeScreen from "@/components/auth/WelcomeScreen";
 import LoginForm from "@/components/auth/LoginForm";
 import SignupForm from "@/components/auth/SignupForm";
 import FeedScreen from "@/components/feed/FeedScreen";
 import ProfileScreen from "@/components/profile/ProfileScreen";
+import UserProfileScreen from "@/components/profile/UserProfileScreen";
+import SearchScreen from "@/components/search/SearchScreen";
+
+// Wrapper component to properly get URL params
+const UserProfileWrapper = ({
+  navigateToFeed,
+}: {
+  navigateToFeed: () => void;
+}) => {
+  const { userId } = useParams();
+  return <UserProfileScreen userId={userId || ""} onBack={navigateToFeed} />;
+};
 import CreatePostScreen from "@/components/feed/CreatePostScreen";
+import NotificationsScreen from "@/components/notifications/NotificationsScreen";
 import { ArrowLeft } from "lucide-react";
 
 const AppRoutes: React.FC = () => {
@@ -63,6 +82,7 @@ const AppRoutes: React.FC = () => {
   const navigateToProfile = () => navigate("/profile");
   const navigateToCreatePost = () => navigate("/create-post");
   const navigateToNotifications = () => navigate("/notifications");
+  const navigateToUserProfile = (userId: string) => navigate(`/user/${userId}`);
 
   if (isLoading) {
     return (
@@ -146,22 +166,22 @@ const AppRoutes: React.FC = () => {
           !isAuthenticated ? (
             <Navigate to="/login" replace />
           ) : (
-            <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 p-4">
-              <div className="flex items-center mb-6">
-                <button
-                  className="w-10 h-10 rounded-md bg-gray-200 dark:bg-gray-800 flex items-center justify-center mr-4"
-                  onClick={navigateToFeed}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <h1 className="text-2xl font-bold">Notifications</h1>
-              </div>
-              <div className="flex-1 flex items-center justify-center">
-                <p className="text-gray-500 dark:text-gray-400">
-                  Notifications feature coming soon!
-                </p>
-              </div>
-            </div>
+            <NotificationsScreen onBack={navigateToFeed} />
+          )
+        }
+      />
+      <Route
+        path="/search"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <SearchScreen
+              onBack={navigateToFeed}
+              onProfile={navigateToProfile}
+              onNotifications={navigateToNotifications}
+              onCreatePost={navigateToCreatePost}
+            />
           )
         }
       />
@@ -178,6 +198,16 @@ const AppRoutes: React.FC = () => {
                 navigateToFeed();
               }}
             />
+          )
+        }
+      />
+      <Route
+        path="/user/:userId"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <UserProfileWrapper navigateToFeed={navigateToFeed} />
           )
         }
       />

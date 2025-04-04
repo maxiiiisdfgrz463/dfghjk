@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, Heart, Send, Loader2 } from "lucide-react";
+import { MessageSquare, Heart, Send, Loader2, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
@@ -17,6 +18,7 @@ interface Comment {
   timestamp: string;
   likes: number;
   isLiked: boolean;
+  user_id: string;
 }
 
 interface CommentSectionProps {
@@ -30,6 +32,7 @@ const CommentSection = ({
   onAddComment = () => {},
   onLikeComment = () => {},
 }: CommentSectionProps) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [newComment, setNewComment] = useState("");
   const [localComments, setLocalComments] = useState<Comment[]>([]);
@@ -106,6 +109,7 @@ const CommentSection = ({
               }),
               likes: likesCount || 0,
               isLiked: likedCommentIds.has(comment.id),
+              user_id: comment.user_id,
             };
           }),
         );
@@ -145,7 +149,6 @@ const CommentSection = ({
           post_id: postId,
           user_id: user.id,
           content: newComment.trim(),
-          created_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -156,13 +159,24 @@ const CommentSection = ({
       }
 
       if (commentData) {
+        // Get the user's profile data for accurate avatar
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("name, avatar_url")
+          .eq("id", user.id)
+          .single();
+
         // Create a new comment object for UI
         const newCommentObj: Comment = {
           id: commentData.id,
           author: {
             name:
-              user.user_metadata?.name || user.email?.split("@")[0] || "User",
+              profileData?.name ||
+              user.user_metadata?.name ||
+              user.email?.split("@")[0] ||
+              "User",
             avatar:
+              profileData?.avatar_url ||
               user.user_metadata?.avatar_url ||
               `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || user.id}`,
           },
@@ -170,6 +184,7 @@ const CommentSection = ({
           timestamp: "Just now",
           likes: 0,
           isLiked: false,
+          user_id: user.id,
         };
 
         // Update local state
@@ -185,6 +200,31 @@ const CommentSection = ({
       console.error("Error submitting comment:", error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!user) return;
+
+    try {
+      // Delete comment from database
+      const { error } = await supabase
+        .from("comments")
+        .delete()
+        .eq("id", commentId)
+        .eq("user_id", user.id); // Ensure user can only delete their own comments
+
+      if (error) {
+        console.error("Error deleting comment:", error);
+        return;
+      }
+
+      // Remove comment from UI
+      setLocalComments(
+        localComments.filter((comment) => comment.id !== commentId),
+      );
+    } catch (error) {
+      console.error("Error deleting comment:", error);
     }
   };
 
@@ -248,7 +288,10 @@ const CommentSection = ({
                   key={comment.id}
                   className="flex gap-3 p-2 border-b border-gray-100 dark:border-gray-700"
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar
+                    className="h-8 w-8 cursor-pointer"
+                    onClick={() => navigate(`/user/${comment.user_id}`)}
+                  >
                     <AvatarImage
                       src={comment.author.avatar}
                       alt={comment.author.name}
@@ -260,24 +303,39 @@ const CommentSection = ({
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium text-sm">
+                        <p
+                          className="font-medium text-sm cursor-pointer hover:underline"
+                          onClick={() => navigate(`/user/${comment.user_id}`)}
+                        >
                           {comment.author.name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {comment.timestamp}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-1 h-auto"
-                        onClick={() => handleLikeComment(comment.id)}
-                      >
-                        <Heart
-                          className={`h-4 w-4 ${comment.isLiked ? "fill-red-500 text-red-500" : "text-gray-500 dark:text-gray-400"}`}
-                        />
-                        <span className="ml-1 text-xs">{comment.likes}</span>
-                      </Button>
+                      <div className="flex items-center">
+                        {user && user.id === comment.user_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-1 h-auto mr-1"
+                            onClick={() => handleDeleteComment(comment.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 h-auto"
+                          onClick={() => handleLikeComment(comment.id)}
+                        >
+                          <Heart
+                            className={`h-4 w-4 ${comment.isLiked ? "fill-red-500 text-red-500" : "text-gray-500 dark:text-gray-400"}`}
+                          />
+                          <span className="ml-1 text-xs">{comment.likes}</span>
+                        </Button>
+                      </div>
                     </div>
                     <p className="text-sm mt-1">{comment.content}</p>
                   </div>
